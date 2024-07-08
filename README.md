@@ -144,10 +144,5 @@ Here are some example commands you can use:
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue if you have any ideas or improvements.
 
-## License
-
-This project is licensed under the MIT License.
-
----
 
 Replace the placeholder text like `YOUR_WEATHER_API_KEY`, `YOUR_NEWS_API_KEY`, and `YOUR_API_KEY` with your actual API keys before using the README file. Save the README content in a file named `README.md` in your project directory and commit it to your GitHub repository.
