@@ -8,6 +8,7 @@ import openai
 import pyautogui 
 import re
 import time
+import requests
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
@@ -28,7 +29,6 @@ def speak(text):
 def get_time():
     now = datetime.datetime.now()
     return now.strftime("%H:%M")
-
 
 # Function to get current date
 def get_date():
@@ -53,43 +53,42 @@ def recognize_speech():
             print("Sorry, my speech service is down.")
             return None
 
-# Function to build the dataset
-def build_dataset():
-    X_train = [
-        "open youtube",
-        "search youtube",
-        "open google",
-        "search google",
-        "open settings",
-        "open command prompt",
-        "open calculator",
-        "open vscode",
-        "open notepad",
-        "open file explorer",
-        "open task manager",
-        "open control panel",
-        "open calendar",
-        "open photos",
-        "open music",
-        "open video",
-        "open whatsapp",
-        "time",
-        "date",
-        "exit",
-        "add",
-        "subtract",
-        "multiply",
-        "divide",
-        "calculate",
-        "close"
-    ]
-    y_train = [
-        "Open", "Search", "Open", "Search", "Open", "Open", "Open", "Open",
-        "Open", "Open", "Open", "Open", "Open", "Open", "Open", "Open", "Open",
-        "Time", "Date", "Exit", "Calculate", "Calculate", "Calculate",
-        "Calculate", "Calculate", "Close"
-    ]
-    return X_train, y_train
+# Function to get weather information
+def get_weather():
+    api_key = "YOUR_WEATHER_API_KEY"  # Replace with your actual API key
+    base_url = "http://api.openweathermap.org/data/2.5/weather?"
+    city_name = "Your_City"  # Replace with your city
+    complete_url = base_url + "appid=" + api_key + "&q=" + city_name
+    response = requests.get(complete_url)
+    data = response.json()
+    
+    if data["cod"] != "404":
+        main = data["main"]
+        weather = data["weather"][0]
+        temp = main["temp"] - 273.15  # Convert Kelvin to Celsius
+        humidity = main["humidity"]
+        description = weather["description"]
+        return f"Current temperature is {temp:.2f} degree Celsius with {description} and humidity of {humidity}%."
+    else:
+        return "City not found."
+
+# Function to get news updates
+def get_news():
+    api_key = "YOUR_NEWS_API_KEY"  # Replace with your actual API key
+    url = f"https://newsapi.org/v2/top-headlines?country=us&apiKey={api_key}"
+    response = requests.get(url)
+    articles = response.json()["articles"]
+    
+    news = []
+    for article in articles[:5]:
+        news.append(article["title"])
+    
+    return "Here are the top 5 news headlines: " + ", ".join(news)
+
+# Function to set a reminder
+def set_reminder(reminder):
+    speak(f"Reminder set for {reminder}")
+    # Save reminder to a file or a database
 
 # Function to open system applications
 def open_application(app_name):
@@ -108,7 +107,8 @@ def open_application(app_name):
         "photos": "ms-photos:",
         "music": "ms-music:",
         "video": "ms-video:",
-        "whatsapp": "https://web.whatsapp.com"
+        "whatsapp": "https://web.whatsapp.com",
+        "spotify": "spotify"
     }
     app_command = system_apps.get(app_name)
     if app_command:
@@ -123,9 +123,7 @@ def open_application(app_name):
 
 # Function to close Chrome tabs or applications
 def close_applications():
-    # Close Chrome tabs
     os.system("taskkill /im chrome.exe /f")
-    # Add more commands to close other applications if needed
     apps_to_close = ["notepad.exe", "calc.exe", "cmd.exe", "explorer.exe", "taskmgr.exe", "control.exe", "code.exe"]
     for app in apps_to_close:
         os.system(f"taskkill /im {app} /f")
@@ -146,7 +144,6 @@ def ask_openai(question):
         return None
 
 def type_in_calculator(expression):
-    # Mapping words to calculator key presses
     key_mapping = {
         'plus': '+',
         'minus': '-',
@@ -157,74 +154,60 @@ def type_in_calculator(expression):
         'equal': '=',
         'equals': '=',
         'percent': '%',
-        'x': '*',  # Handle 'x' as multiplication
+        'x': '*',
     }
-
-    # Replace words with symbols
     for word, symbol in key_mapping.items():
         expression = expression.replace(word, symbol)
-
-    # Removing any non-arithmetic characters for security
     expression = re.sub(r'[^0-9+\-*/=%]', '', expression)
-
-    # Simulate key presses
     for char in expression:
         pyautogui.press(char)
         time.sleep(0.1)
-
     pyautogui.press('enter')
 
 # Function to search a contact on WhatsApp Web
 def search_whatsapp_contact(contact_name):
-    # Start the WebDriver with Chrome
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
     driver.get("https://web.whatsapp.com")
-    
-    # Check if WhatsApp is already logged in
     if "Click to reload QR code" not in driver.page_source:
         speak("Already logged in to WhatsApp Web.")
     else:
-        # Wait for user to scan QR code and WhatsApp Web to load
         speak("Please scan the QR code to log in to WhatsApp Web.")
         while "Click to reload QR code" in driver.page_source:
             time.sleep(5)
         speak("Logged in to WhatsApp Web.")
-    
-    # Search for the contact
     search_box = None
     while search_box is None:
         try:
             search_box = driver.find_element("xpath", "//div[@contenteditable='true'][@data-tab='3']")
         except:
             pass
-
     search_box.click()
     search_box.send_keys(contact_name)
-    time.sleep(2)  # Wait for search results to appear
+    time.sleep(2)
     search_box.send_keys(Keys.ENTER)
     speak(f"Opening chat with {contact_name}")
-
-    # Keep the browser open indefinitely
     while True:
         time.sleep(10)
 
+# Function to read emails
+def read_emails():
+    # Placeholder for email reading functionality
+    speak("Reading your emails...")
+
+# Function to play music
+def play_music(song):
+    speak(f"Playing {song}")
+    webbrowser.open(f"https://www.youtube.com/results?search_query={song}")
+    
 # Main function for voice assistant
 def voice_assistant():
     speak("Hello, how can I help you today?")
-    
-    # Build the dataset
     X_train, y_train = build_dataset()
-    
-    # Create a pipeline with TF-IDF vectorizer and Random Forest classifier
     pipeline = make_pipeline(
         TfidfVectorizer(preprocessor=lambda x: x.lower()),
         RandomForestClassifier(n_estimators=100, random_state=42)
     )
-    
-    # Train the classifier
     pipeline.fit(X_train, y_train)
-    
-    # Dictionary mapping user commands to system applications
     system_apps = {
         "youtube": "https://www.youtube.com",
         "google": "https://www.google.com",
@@ -240,7 +223,8 @@ def voice_assistant():
         "photos": "ms-photos:",
         "music": "ms-music:",
         "video": "ms-video:",
-        "whatsapp": "https://web.whatsapp.com"
+        "whatsapp": "https://web.whatsapp.com",
+        "spotify": "spotify"
     }
     
     while True:
@@ -249,11 +233,9 @@ def voice_assistant():
         if query is None:
             continue
         
-        # Predict the intent
         intent = pipeline.predict([query])[0]
         
         if intent == "Open":
-            # Extract the application name
             app_name = None
             for word in query.split():
                 if word in system_apps:
@@ -261,7 +243,6 @@ def voice_assistant():
                     break
             if app_name:
                 if app_name == "settings":
-                    # Open Settings and search if the query contains 'search'
                     if "search" in query:
                         search_query = query.split("search", 1)[-1].strip()
                         os.system(f"{system_apps[app_name]} {search_query}")
@@ -276,7 +257,6 @@ def voice_assistant():
             else:
                 speak("Sorry, I didn't recognize the application.")
         elif intent == "Search":
-            # Perform search based on query
             if "youtube" in query:
                 search_query = query.split("search", 1)[-1].strip()
                 webbrowser.open(f"https://www.youtube.com/results?search_query={search_query}")
@@ -298,9 +278,21 @@ def voice_assistant():
             expression = query.split("calculate", 1)[-1].strip()
             speak(f"Calculating {expression}")
             type_in_calculator(expression)
-        
+        elif intent == "Weather":
+            weather = get_weather()
+            speak(weather)
+        elif intent == "News":
+            news = get_news()
+            speak(news)
+        elif intent == "Reminder":
+            reminder = query.split("reminder", 1)[-1].strip()
+            set_reminder(reminder)
+        elif intent == "Music":
+            song = query.split("play", 1)[-1].strip()
+            play_music(song)
+        elif intent == "Email":
+            read_emails()
         else:
-            # Handle general knowledge questions using OpenAI
             answer = ask_openai(query)
             if answer:
                 speak(answer)
